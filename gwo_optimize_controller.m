@@ -42,9 +42,16 @@ fprintf('GWO-%s: %d wolves, %d iterations, %d parameters\n', ...
 fprintf('  fitness grid Ts = %.4g s, Tfinal = %.3f s (%d samples)\n', ...
     tFit(2)-tFit(1),tFit(end),numel(tFit));
 
-for i = 1:nWolves
-    fitness(i) = evaluateItae(plant,tFit,qFit,controllerType, ...
-        positions(i,:),cfgFit);
+try
+    parfor i = 1:nWolves
+        fitness(i) = evaluateItae(plant,tFit,qFit,controllerType, ...
+            positions(i,:),cfgFit);
+    end
+catch
+    for i = 1:nWolves
+        fitness(i) = evaluateItae(plant,tFit,qFit,controllerType, ...
+            positions(i,:),cfgFit);
+    end
 end
 
 [alphaScore,alphaPos,betaScore,betaPos,deltaScore,deltaPos] = ...
@@ -59,9 +66,21 @@ for iter = 1:maxIter
     positions = gwoUpdatePositions(positions, ...
         alphaPos,betaPos,deltaPos,a,lb,ub);
 
+    newFitness = zeros(nWolves,1);
+    try
+        parfor i = 1:nWolves
+            newFitness(i) = evaluateItae(plant,tFit,qFit,controllerType, ...
+                positions(i,:),cfgFit);
+        end
+    catch
+        for i = 1:nWolves
+            newFitness(i) = evaluateItae(plant,tFit,qFit,controllerType, ...
+                positions(i,:),cfgFit);
+        end
+    end
+
     for i = 1:nWolves
-        fitness(i) = evaluateItae(plant,tFit,qFit,controllerType, ...
-            positions(i,:),cfgFit);
+        fitness(i) = newFitness(i);
         [alphaScore,alphaPos,betaScore,betaPos,deltaScore,deltaPos] = ...
             updateLeaders(positions(i,:),fitness(i), ...
             alphaScore,alphaPos,betaScore,betaPos,deltaScore,deltaPos);

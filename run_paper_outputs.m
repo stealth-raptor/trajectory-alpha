@@ -49,13 +49,19 @@ fopid.mu = 0.85*ones(6,1);
 % Standard GWO (Mirjalili 2014). Fitness is closed-loop ITAE on the same
 % step trajectory and plant. Search uses a coarser Ts (tuneTs) only to make
 % the swarm evaluations tractable; all printed metrics are full cfg.Ts.
-% Increase nWolves/maxIter or set tuneTs=[] for a longer/full-rate search.
 gwo.enabled = true;
-gwo.nWolves = 8;
-gwo.maxIter = 12;
+gwo.fastMode = false;  % Full deep optimization search
+if gwo.fastMode
+    gwo.nWolves = 4;
+    gwo.maxIter = 6;
+    gwo.tuneTs = 0.02;
+else
+    gwo.nWolves = 10;
+    gwo.maxIter = 15;
+    gwo.tuneTs = 0.005;  % Finer grid matching simulation timestep
+end
 gwo.rngSeed = 42;
-gwo.tuneTs = 0.01;
-gwo.useCache = true;
+gwo.useCache = false;  % Disable cache to ensure fresh GWO output and graphs are generated
 
 %% Plant and references
 plant = make_ur5_plant(cfg);
@@ -188,26 +194,32 @@ end
 
 colors.pid = [0.10 0.55 0.20];
 colors.fopid = [0.00 0.30 0.75];
+colors.gwoPid = [0.85 0.35 0.00];
+colors.gwoFopid = [0.60 0.00 0.60];
 
-%% Step position and error figures
+%% Step position and error figures (4-way comparison)
 for j = 1:6
     fig = figure('Visible','off','Color','w');
     plot(t,qStep(:,j),'k--','LineWidth',1.2); hold on;
     plot(t,pidStep.q(:,j),'Color',colors.pid,'LineWidth',1.1);
     plot(t,fopidStep.q(:,j),'Color',colors.fopid,'LineWidth',1.1);
+    plot(t,gwoPidStep.q(:,j),'Color',colors.gwoPid,'LineWidth',1.1,'LineStyle','-.');
+    plot(t,gwoFopidStep.q(:,j),'Color',colors.gwoFopid,'LineWidth',1.1,'LineStyle','-');
     grid on; box on;
     xlabel('Time (s)'); ylabel('Joint angle (rad)');
     title(sprintf('Joint %d step position tracking',j));
-    legend('Target','PID','FOPID','Location','best');
+    legend('Target','PID','FOPID','GWO-PID','GWO-FOPID','Location','best');
     saveFigure(fig,stepFigRoot,sprintf('joint_%02d_position_tracking',j));
 
     fig = figure('Visible','off','Color','w');
     plot(t,qStep(:,j)-pidStep.q(:,j),'Color',colors.pid,'LineWidth',1.1); hold on;
     plot(t,qStep(:,j)-fopidStep.q(:,j),'Color',colors.fopid,'LineWidth',1.1);
+    plot(t,qStep(:,j)-gwoPidStep.q(:,j),'Color',colors.gwoPid,'LineWidth',1.1,'LineStyle','-.');
+    plot(t,qStep(:,j)-gwoFopidStep.q(:,j),'Color',colors.gwoFopid,'LineWidth',1.1,'LineStyle','-');
     yline(0,'k:'); grid on; box on;
     xlabel('Time (s)'); ylabel('Tracking error (rad)');
     title(sprintf('Joint %d step tracking error',j));
-    legend('PID error','FOPID error','Location','best');
+    legend('PID error','FOPID error','GWO-PID error','GWO-FOPID error','Location','best');
     saveFigure(fig,stepFigRoot,sprintf('joint_%02d_tracking_error',j));
 end
 
@@ -217,33 +229,39 @@ for j = 1:6
     nexttile;
     plot(t,pidStep.tau(:,j),'Color',colors.pid,'LineWidth',1.0); hold on;
     plot(t,fopidStep.tau(:,j),'Color',colors.fopid,'LineWidth',1.0);
+    plot(t,gwoPidStep.tau(:,j),'Color',colors.gwoPid,'LineWidth',1.0,'LineStyle','-.');
+    plot(t,gwoFopidStep.tau(:,j),'Color',colors.gwoFopid,'LineWidth',1.0);
     grid on; box on; title(sprintf('Joint %d torque',j));
     xlabel('Time (s)'); ylabel('\tau (N m)');
     if j == 1
-        legend('PID','FOPID','Location','best');
+        legend('PID','FOPID','GWO-PID','GWO-FOPID','Location','best');
     end
 end
 saveFigure(fig,stepFigRoot,'all_joints_torque_comparison');
 
-%% Sine position and error figures
+%% Sine position and error figures (4-way comparison)
 for j = 1:6
     fig = figure('Visible','off','Color','w');
     plot(t,qSine(:,j),'k--','LineWidth',1.2); hold on;
     plot(t,pidSine.q(:,j),'Color',colors.pid,'LineWidth',1.1);
     plot(t,fopidSine.q(:,j),'Color',colors.fopid,'LineWidth',1.1);
+    plot(t,gwoPidSine.q(:,j),'Color',colors.gwoPid,'LineWidth',1.1,'LineStyle','-.');
+    plot(t,gwoFopidSine.q(:,j),'Color',colors.gwoFopid,'LineWidth',1.1,'LineStyle','-');
     grid on; box on;
     xlabel('Time (s)'); ylabel('Joint angle (rad)');
     title(sprintf('Joint %d sine position tracking',j));
-    legend('Target','PID','FOPID','Location','best');
+    legend('Target','PID','FOPID','GWO-PID','GWO-FOPID','Location','best');
     saveFigure(fig,sineFigRoot,sprintf('joint_%02d_position_tracking',j));
 
     fig = figure('Visible','off','Color','w');
     plot(t,qSine(:,j)-pidSine.q(:,j),'Color',colors.pid,'LineWidth',1.1); hold on;
     plot(t,qSine(:,j)-fopidSine.q(:,j),'Color',colors.fopid,'LineWidth',1.1);
+    plot(t,qSine(:,j)-gwoPidSine.q(:,j),'Color',colors.gwoPid,'LineWidth',1.1,'LineStyle','-.');
+    plot(t,qSine(:,j)-gwoFopidSine.q(:,j),'Color',colors.gwoFopid,'LineWidth',1.1,'LineStyle','-');
     yline(0,'k:'); grid on; box on;
     xlabel('Time (s)'); ylabel('Tracking error (rad)');
     title(sprintf('Joint %d sine tracking error',j));
-    legend('PID error','FOPID error','Location','best');
+    legend('PID error','FOPID error','GWO-PID error','GWO-FOPID error','Location','best');
     saveFigure(fig,sineFigRoot,sprintf('joint_%02d_tracking_error',j));
 end
 
@@ -253,10 +271,12 @@ for j = 1:6
     nexttile;
     plot(t,pidSine.tau(:,j),'Color',colors.pid,'LineWidth',1.0); hold on;
     plot(t,fopidSine.tau(:,j),'Color',colors.fopid,'LineWidth',1.0);
+    plot(t,gwoPidSine.tau(:,j),'Color',colors.gwoPid,'LineWidth',1.0,'LineStyle','-.');
+    plot(t,gwoFopidSine.tau(:,j),'Color',colors.gwoFopid,'LineWidth',1.0);
     grid on; box on; title(sprintf('Joint %d torque',j));
     xlabel('Time (s)'); ylabel('\tau (N m)');
     if j == 1
-        legend('PID','FOPID','Location','best');
+        legend('PID','FOPID','GWO-PID','GWO-FOPID','Location','best');
     end
 end
 saveFigure(fig,sineFigRoot,'all_joints_torque_comparison');
@@ -283,6 +303,8 @@ if gwo.enabled && ~isempty(gwoPidTune) && ~isempty(gwoFopidTune)
     if ~exist(gwoFigRoot,'dir')
         mkdir(gwoFigRoot);
     end
+    
+    % Convergence plot
     fig = figure('Visible','off','Color','w');
     plot(1:numel(gwoPidTune.fitnessHistory),gwoPidTune.fitnessHistory, ...
         'LineWidth',1.2); hold on;
@@ -293,6 +315,60 @@ if gwo.enabled && ~isempty(gwoPidTune) && ~isempty(gwoFopidTune)
     title('GWO convergence (step ITAE)');
     legend('GWO-PID','GWO-FOPID','Location','best');
     saveFigure(fig,gwoFigRoot,'gwo_itae_convergence');
+
+    % Dedicated GWO Step position tracking (3x2 grid)
+    fig = figure('Visible','off','Color','w');
+    tiledlayout(3,2,'TileSpacing','compact');
+    for j = 1:6
+        nexttile;
+        plot(t,qStep(:,j),'k--','LineWidth',1.0); hold on;
+        plot(t,gwoPidStep.q(:,j),'Color',colors.gwoPid,'LineWidth',1.1,'LineStyle','-.');
+        plot(t,gwoFopidStep.q(:,j),'Color',colors.gwoFopid,'LineWidth',1.1);
+        grid on; box on; title(sprintf('Joint %d',j));
+        xlabel('Time (s)'); ylabel('q (rad)');
+        if j == 1, legend('Target','GWO-PID','GWO-FOPID','Location','best'); end
+    end
+    saveFigure(fig,gwoFigRoot,'gwo_step_position_tracking');
+
+    % Dedicated GWO Step tracking error (3x2 grid)
+    fig = figure('Visible','off','Color','w');
+    tiledlayout(3,2,'TileSpacing','compact');
+    for j = 1:6
+        nexttile;
+        plot(t,qStep(:,j)-gwoPidStep.q(:,j),'Color',colors.gwoPid,'LineWidth',1.1,'LineStyle','-.'); hold on;
+        plot(t,qStep(:,j)-gwoFopidStep.q(:,j),'Color',colors.gwoFopid,'LineWidth',1.1);
+        yline(0,'k:'); grid on; box on; title(sprintf('Joint %d error',j));
+        xlabel('Time (s)'); ylabel('Error (rad)');
+        if j == 1, legend('GWO-PID','GWO-FOPID','Location','best'); end
+    end
+    saveFigure(fig,gwoFigRoot,'gwo_step_tracking_error');
+
+    % Dedicated GWO Sine position tracking (3x2 grid)
+    fig = figure('Visible','off','Color','w');
+    tiledlayout(3,2,'TileSpacing','compact');
+    for j = 1:6
+        nexttile;
+        plot(t,qSine(:,j),'k--','LineWidth',1.0); hold on;
+        plot(t,gwoPidSine.q(:,j),'Color',colors.gwoPid,'LineWidth',1.1,'LineStyle','-.');
+        plot(t,gwoFopidSine.q(:,j),'Color',colors.gwoFopid,'LineWidth',1.1);
+        grid on; box on; title(sprintf('Joint %d',j));
+        xlabel('Time (s)'); ylabel('q (rad)');
+        if j == 1, legend('Target','GWO-PID','GWO-FOPID','Location','best'); end
+    end
+    saveFigure(fig,gwoFigRoot,'gwo_sine_position_tracking');
+
+    % Dedicated GWO Torque comparison (3x2 grid)
+    fig = figure('Visible','off','Color','w');
+    tiledlayout(3,2,'TileSpacing','compact');
+    for j = 1:6
+        nexttile;
+        plot(t,gwoPidStep.tau(:,j),'Color',colors.gwoPid,'LineWidth',1.0,'LineStyle','-.'); hold on;
+        plot(t,gwoFopidStep.tau(:,j),'Color',colors.gwoFopid,'LineWidth',1.0);
+        grid on; box on; title(sprintf('Joint %d torque',j));
+        xlabel('Time (s)'); ylabel('\tau (N m)');
+        if j == 1, legend('GWO-PID','GWO-FOPID','Location','best'); end
+    end
+    saveFigure(fig,gwoFigRoot,'gwo_torque_comparison');
 end
 
 writetable(stepMetricsGwo,fullfile(stepMetricRoot,'step_joint_metrics_gwo.csv'));
