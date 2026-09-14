@@ -33,11 +33,14 @@ cfg.oustaloup.method = 'tustin';
 %% Baseline controller parameters
 % Hardcoded hand-tuned baseline values. The paper does not publish its
 % final gains, so these values are selected by direct simulation trials.
-pid.Kp = [120 100 85 55 35 20].';
-pid.Ki = [8 7 6 4 3 2].';
-pid.Kd = [18 15 12 7 4 2].';
+pid.Kp = [174.1 145.1 123.3 79.8 50.8 29.0].';
+pid.Ki = [11.6 10.2 8.70 5.80 4.35 2.90].';
+pid.Kd = [9.60 8.00 6.40 3.73 2.13 1.07].';
 
 fopid = pid;
+fopid.Kp = [137.2 114.3 97.2 62.9 40.0 22.9].';
+fopid.Ki = [9.14 8.00 6.86 4.57 3.43 2.29].';
+fopid.Kd = [22.1 18.4 14.8 8.61 4.92 2.46].';
 fopid.lambda = 0.85*ones(6,1);
 fopid.mu = 0.85*ones(6,1);
 
