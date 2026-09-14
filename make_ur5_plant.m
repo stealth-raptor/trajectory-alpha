@@ -1,112 +1,69 @@
 function plant = make_ur5_plant(cfg)
-%MAKE_UR5_PLANT Prefer a coupled rigidBodyTree UR5 plant.
-% If Robotics System Toolbox/loadrobot is unavailable, use a clearly marked
-% decoupled approximation based on the masses, lengths and diagonal inertia
-% values listed in Table 2 of the paper.
+%MAKE_UR5_PLANT  Single definitive paper-faithful Lagrange plant for UR5.
+%
+%   This is the FINAL plant architecture.  There are NO alternative models,
+%   NO rigidBodyTree / universalUR5 path, and NO decoupled approximation.
+%
+%   The dynamics follow the Lagrange formulation of the reference paper:
+%
+%       M(q) qdd + C(q,qd) qd + G(q) + tau_f(qd) = tau
+%
+%   with tau_f,i = fc_i * sign(qd_i) + b_i * qd_i
+%
+%   All mass, length and inertia values are taken exactly from Table 2.
+%   Missing geometric data (DH parameters, COM locations) are supplied by
+%   clearly documented assumptions inside paper_lagrange_ur5.m.
+%
+%   Interface preserved for simulate_ur5_controller.m:
+%       plant.accel(q, dq, tau)  returns 6x1 joint accelerations.
 
-% Older experiment scripts do not define friction explicitly. Use the
-% project's documented defaults while allowing callers to override them.
-if ~isfield(cfg,'friction')
-    cfg.friction.viscous = 0.05*ones(6,1);
-    cfg.friction.coulomb = 0.20*ones(6,1);
-    cfg.friction.velocityScale = 1e-3;
+% Friction defaults (paper does not publish numerical fc, b values).
+% Callers may override via cfg.friction.
+if ~isfield(cfg, 'friction')
+    cfg.friction.viscous = 0.05 * ones(6,1);
+    cfg.friction.coulomb = 0.20 * ones(6,1);
 else
-    if ~isfield(cfg.friction,'viscous')
-        cfg.friction.viscous = 0.05*ones(6,1);
+    if ~isfield(cfg.friction, 'viscous')
+        cfg.friction.viscous = 0.05 * ones(6,1);
     end
-    if ~isfield(cfg.friction,'coulomb')
-        cfg.friction.coulomb = 0.20*ones(6,1);
-    end
-    if ~isfield(cfg.friction,'velocityScale')
-        cfg.friction.velocityScale = 1e-3;
+    if ~isfield(cfg.friction, 'coulomb')
+        cfg.friction.coulomb = 0.20 * ones(6,1);
     end
 end
 
-plant.friction = cfg.friction;
-hasRST = exist('loadrobot','file') == 2;
+plant.type        = 'paper_lagrange';
+plant.description = ['paper-faithful Lagrange coupled 6-DOF UR5 ', ...
+                     '(Table 2 params + documented DH/COM assumptions)'];
+plant.friction    = cfg.friction;
 
-if hasRST
-    try
-        robot = loadrobot('universalUR5','DataFormat','column', ...
-            'Gravity',[0 0 -9.81]);
+% Acceleration map required by the existing simulator
+plant.accel = @(q, dq, tau) paper_accel(q, dq, tau, cfg.friction);
 
-        % Reject malformed or singular robot assets before RK4 can spread
-        % invalid dynamics values through the whole state.
-        qTest = zeros(6,1);
-        dqTest = zeros(6,1);
-        MTest = massMatrix(robot,qTest);
-        hTest = velocityProduct(robot,qTest,dqTest);
-        GTest = gravityTorque(robot,qTest);
-        valid = all(isfinite(MTest),'all') && all(isfinite(hTest)) && ...
-            all(isfinite(GTest)) && rcond(MTest) > 1e-12;
-
-        if valid
-            plant.type = 'rigidBodyTree';
-            plant.robot = robot;
-            plant.description = 'coupled rigidBodyTree universalUR5';
-            plant.accel = @(q,dq,tau) ...
-                rigidBodyTreeAccel(robot,q,dq,tau,cfg);
-            return;
-        end
-
-        warning(['universalUR5 preflight returned invalid or singular ', ...
-            'dynamics. Falling back to the Table-2 approximation.']);
-    catch ME
-        warning('UR5Plant:LoadRobotFailed', ...
-            'loadrobot failed (%s). Falling back to decoupled model.', ...
-            ME.message);
-    end
 end
 
-% Table 2 values from the paper. The paper does not provide a complete
-% executable UR5 parameter set, so this is only a fallback approximation.
-m = [2.0 2.5 5.7 3.9 2.5 2.5].';
-L = [0.128 0.612 0.571 0.164 0.115 0.092].';
-Izz = [1.0e-3 4.0e-2 4.0e-2 4.0e-2 4.0e-2 4.0e-2].';
-J = Izz + m.*(L/2).^2;
-g = 9.81;
+% -------------------------------------------------------------------------
+function qdd = paper_accel(q, dq, tau, friction)
+% Solve  M(q) qdd = tau - C(q,dq)*dq - G(q) - fr(dq)
 
-plant.type = 'decoupledFallback';
-plant.description = ...
-    'decoupled Table-2 approximation (not coupled UR5 dynamics)';
-plant.J = J;
-plant.m = m;
-plant.L = L;
-plant.g = g;
-plant.accel = @(q,dq,tau) ...
-    decoupledAccel(q,dq,tau,J,m,L,g,cfg);
-end
-
-function ddq = rigidBodyTreeAccel(robot,q,dq,tau,cfg)
-validateattributes(q,{'double','single'}, ...
-    {'real','finite','vector','numel',6});
-validateattributes(dq,{'double','single'}, ...
-    {'real','finite','vector','numel',6});
-validateattributes(tau,{'double','single'}, ...
-    {'real','finite','vector','numel',6});
-
-M = massMatrix(robot,q);
-h = velocityProduct(robot,q,dq);
-G = gravityTorque(robot,q);
-fr = cfg.friction.viscous.*dq + cfg.friction.coulomb .* ...
-    tanh(dq/cfg.friction.velocityScale);
-
-ddq = M \ (tau - h - G - fr);
-
-if any(~isfinite(ddq))
-    error(['UR5 rigidBodyTree dynamics produced NaN/Inf acceleration ', ...
-        'at q = [%s].'],sprintf(' %.5g',q));
-end
-end
-
-function ddq = decoupledAccel(q,dq,tau,J,m,L,g,cfg)
-q = q(:);
-dq = dq(:);
+q   = q(:);
+dq  = dq(:);
 tau = tau(:);
 
-fr = cfg.friction.viscous.*dq + cfg.friction.coulomb .* ...
-    tanh(dq/cfg.friction.velocityScale);
-gravity = m.*g.*(L/2).*sin(q);
-ddq = (tau - fr - gravity)./J;
-ddq = ddq(:);
+[M, Cqd, G, fr] = paper_lagrange_ur5(q, dq, friction);
+
+rhs = tau - Cqd - G - fr;
+
+% Guard against numerical singularity (should never happen for a physical robot)
+if rcond(M) < 1e-12
+    warning('paper_accel:IllConditionedM', ...
+        'Inertia matrix is nearly singular (rcond = %.3e).', rcond(M));
+end
+
+qdd = M \ rhs;
+qdd = qdd(:);
+
+if any(~isfinite(qdd))
+    error('paper_accel:NonFinite', ...
+        'Non-finite acceleration produced at q = [%s].', sprintf(' %.4g', q));
+end
 end

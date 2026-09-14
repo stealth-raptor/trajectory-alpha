@@ -7,7 +7,7 @@ This project compares two joint-position controllers for a six-joint UR5 robotic
 1. Conventional PID.
 2. Fractional-order PID (FOPID).
 
-FBPA optimization, standalone debug scripts, standalone test scripts and duplicate output scripts have been removed. The single entry point is:
+The single entry point is:
 
 ```matlab
 run_paper_outputs
@@ -34,7 +34,7 @@ PID or FOPID controller
 Joint torque tau
         |
         v
-UR5 plant model
+UR5 plant model  (paper-faithful Lagrange, fully coupled)
         |
         v
 Position and velocity response
@@ -43,7 +43,37 @@ Position and velocity response
 Metrics, plots and saved result files
 ```
 
-The current plant prefers MATLAB's coupled `rigidBodyTree` `universalUR5` model. If Robotics System Toolbox is unavailable or the model fails its numerical preflight check, the plant uses a documented Table-2-based decoupled approximation.
+## Plant model (FINAL, single architecture)
+
+The plant is a **paper-faithful, fully-coupled Lagrange model**.
+
+Dynamic equation (exactly as required by the reference paper):
+
+```
+M(q) * qdd + C(q,qd)*qd + G(q) + tau_f(qd) = tau
+```
+
+with
+
+```
+tau_f,i = fc_i * sign(qd_i) + b_i * qd_i
+```
+
+- All masses, lengths and inertia matrices are taken **exactly** from Table 2 of the paper.
+- The kinematic chain (DH parameters) and COM locations are **not** fully specified by the paper; a clearly documented standard UR5-like convention is used. See the header comments of `paper_lagrange_ur5.m` for the complete list of geometric assumptions.
+- There is **no** `loadrobot('universalUR5')`, no `rigidBodyTree`, and no decoupled single-joint approximation.
+
+The plant is created by:
+
+```matlab
+plant = make_ur5_plant(cfg);
+```
+
+and exposes the acceleration map expected by the simulator:
+
+```matlab
+qdd = plant.accel(q, dq, tau);
+```
 
 ## Running the project
 
@@ -51,6 +81,12 @@ From the project folder, run:
 
 ```matlab
 run_paper_outputs
+```
+
+Validation of the plant can be performed with:
+
+```matlab
+validate_paper_plant
 ```
 
 The script uses:
@@ -62,8 +98,6 @@ The script uses:
 - Six joints controlled independently at the controller level.
 - RK4 numerical integration.
 - Oustaloup approximation for the fractional operators.
-
-The paper does not publish all experiment settings or final controller gains. The script keeps these assumptions visible in its configuration section.
 
 ## Output files
 
@@ -80,156 +114,52 @@ outputs/paper/
 └── results/
 ```
 
-The output includes:
-
-- Six step-position tracking figures.
-- Six step-error figures.
-- One six-joint step-torque figure.
-- Six sine-position tracking figures.
-- Six sine-error figures.
-- One six-joint sine-torque figure.
-- CSV tables for joint-level and summary metrics.
-- `paper_pid_fopid_results.mat` containing all simulation data.
-
 ## File descriptions
 
 ### `run_paper_outputs.m`
 
 The only experiment script. It defines the simulation settings and baseline gains, creates step and sine references, runs PID and FOPID, calculates metrics, creates figures and saves all outputs.
 
-It does not load or generate FBPA data or optimized gain files.
-
 ### `make_ur5_plant.m`
 
-Creates the robot plant.
+Creates the single definitive plant. Calls the Lagrange dynamics implementation and returns a struct with the `accel` handle.
 
-When Robotics System Toolbox is available, it loads:
+### `paper_lagrange_ur5.m`
 
-```matlab
-loadrobot('universalUR5','DataFormat','column', ...
-    'Gravity',[0 0 -9.81])
-```
-
-The rigid-body branch calculates acceleration using:
-
-$$
-\ddot q = M(q)^{-1}\left[\tau - h(q,\dot q) - G(q) - f(\dot q)\right]
-$$
-
-where:
-
-- `M(q)` is the coupled inertia matrix.
-- `h(q,dq)` contains velocity-product, Coriolis and centrifugal terms.
-- `G(q)` is the gravity torque.
-- `f(dq)` is the added friction torque.
-
-The code prints the active model description. The preferred output is:
-
-```text
-coupled rigidBodyTree universalUR5
-```
-
-If the Robotics System Toolbox path is unavailable, the fallback uses the paper's listed masses, lengths and diagonal inertia values. The fallback is explicitly labelled:
-
-```text
-decoupled Table-2 approximation (not coupled UR5 dynamics)
-```
+Core dynamics. Computes the configuration-dependent inertia matrix \(M(q)\), the Coriolis/centrifugal vector \(C(q,\dot q)\dot q\), the gravity vector \(G(q)\) and the friction vector from the Lagrange formulation (homogeneous transforms + geometric Jacobians of the centres of mass). All paper-supplied numerical data and all geometric assumptions are isolated inside this file.
 
 ### `simulate_ur5_controller.m`
 
-Runs the six-joint closed-loop simulation. At each time step it:
+Unchanged. Runs the six-joint closed-loop simulation using the plant's `accel` map.
 
-1. Reads joint position and velocity.
-2. Calculates the position error.
-3. Calculates PID or FOPID torque.
-4. Applies torque saturation.
-5. Integrates the robot dynamics.
-6. Stores position, velocity and torque.
+### `validate_paper_plant.m`
 
-Its result structure contains:
+Numerical verification that \(M\) is 6×6, symmetric and positive-definite, that the model is coupled, that \(G\) and friction have the correct structure, and that no toolbox dependency remains.
 
-```matlab
-result.t
-result.q
-result.dq
-result.tau
-```
+### Other files
 
-### `init_oustaloup_bank.m`
-
-Initializes the discrete filter banks used to approximate the fractional integral and derivative in FOPID. The default approximation uses order 5, which produces 11 first-order sections per filter.
-
-### `oustaloup_step_bank.m`
-
-Advances the Oustaloup filter states by one sample and returns the fractional integral and derivative signals used by FOPID.
-
-### `make_step_metrics.m`
-
-Calculates, for every joint and controller:
-
-- Overshoot percentage.
-- Settling time.
-- Peak time.
-- Target value.
-
-It also creates a summary table averaged over the six joints.
-
-### `make_sine_metrics.m`
-
-Calculates, for every joint and controller:
-
-- Mean squared error.
-- Root mean squared error.
-- Mean absolute error.
-- Maximum absolute error.
-- Mean absolute torque.
-- Maximum absolute torque.
-
-### `paper.txt`
-
-Text copy of the research paper used as the reference for the controller comparison, UR5 parameters, performance metrics and experiment motivation.
+`init_oustaloup_bank.m`, `oustaloup_step_bank.m`, `make_step_metrics.m`, `make_sine_metrics.m` are unchanged.
 
 ## Controller explanation
 
 ### PID
 
-The conventional PID control law is:
-
-$$
-\tau(t) = K_p e(t) + K_i\int e(t)dt + K_d\frac{de(t)}{dt}
-$$
-
-`Kp`, `Ki` and `Kd` are defined separately for each of the six joints.
+```
+tau(t) = Kp * e(t) + Ki * integral(e) + Kd * de/dt
+```
 
 ### FOPID
 
-FOPID adds two fractional orders:
-
-$$
-\tau(t) = K_p e(t) + K_i D^{-\lambda}e(t) + K_d D^{\mu}e(t)
-$$
-
-The five parameters for each joint are:
-
-```text
-Kp, Ki, Kd, lambda, mu
 ```
-
-`lambda` controls the fractional integral order and `mu` controls the fractional derivative order. In this cleaned project, FOPID uses explicit baseline values; FBPA is no longer part of the workflow.
+tau(t) = Kp * e(t) + Ki * D^(-lambda) e(t) + Kd * D^(mu) e(t)
+```
 
 ## Relationship to the research paper
 
-The paper describes a Lagrange-based rigid-body model and gives some physical parameters. It also compares PID, FOPID and FBPA-FOPID. This cleaned project intentionally reproduces only the PID-versus-FOPID part.
+The paper describes a Lagrange-based rigid-body model and gives the physical parameters of Table 2. It does **not** publish a complete DH table, COM locations or the numerical friction coefficients. Consequently:
 
-The paper does not provide enough information to recreate its exact Simulink model or final gains. Therefore:
+- Masses, lengths and the six diagonal inertia matrices are used exactly as published.
+- Geometric quantities required by the Lagrange derivation but absent from the paper are supplied by a single, clearly documented set of assumptions (see `paper_lagrange_ur5.m`).
+- The resulting plant is the definitive model for all subsequent PID / FOPID experiments in this repository.
 
-- The preferred plant is MATLAB's built-in coupled `universalUR5` model.
-- The fallback uses the paper's Table 2 values but is decoupled and approximate.
-- The reference amplitudes, frequency, friction, torque limit, initial conditions and gains are explicit implementation assumptions.
-- The generated results should be presented as a MATLAB reproduction-style comparison, not as exact numerical reproduction of the paper.
-
-## How to explain the project to a supervisor
-
-> The project evaluates joint-space trajectory tracking for a six-DOF UR5 model. A conventional PID controller is used as the baseline and is compared with a fractional-order PID controller. The FOPID controller introduces fractional integral and derivative orders, giving two additional tuning parameters per joint. The robot is simulated using MATLAB's coupled UR5 rigid-body model when available, with a Table-2 approximation as a fallback. Step and sinusoidal references are applied, and the controllers are compared using overshoot, settling time, peak time, tracking error and torque effort.
-
-The most important limitation is that the exact Simulink model and final gains from the paper are not published. The project therefore provides a transparent and reproducible comparison under stated assumptions.
+The generated results should be presented as a MATLAB reproduction under these explicit modelling choices, not as a bit-exact numerical replica of the authors' unpublished Simulink model.
