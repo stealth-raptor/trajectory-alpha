@@ -33,31 +33,34 @@ cfg.oustaloup.method = 'tustin';
 
 %% Baseline controller parameters
 % Hardcoded hand-tuned baseline values. The paper does not publish its
-% final gains, so these values are selected by direct simulation trials.
-pid.Kp = [174.1 145.1 123.3 79.8 50.8 29.0].';
-pid.Ki = [11.6 10.2 8.70 5.80 4.35 2.90].';
-pid.Kd = [9.60 8.00 6.40 3.73 2.13 1.07].';
+%% Optimized baseline controller parameters
+% Gains obtained from the parameter-tuning sweep.
+% These values are frozen for subsequent experiments.
+
+pid.Kp = [61.61 167.2 90.91 45.75 2.212 3.617].';
+pid.Ki = [4.105 11.75 6.414 3.325 0.1894 0.3617].';
+pid.Kd = [23.89 25.36 7.935 0.792 0.4446 0.4931].';
 
 fopid = pid;
-fopid.Kp = [137.2 114.3 97.2 62.9 40.0 22.9].';
-fopid.Ki = [9.14 8.00 6.86 4.57 3.43 2.29].';
-fopid.Kd = [22.1 18.4 14.8 8.61 4.92 2.46].';
-fopid.lambda = 0.85*ones(6,1);
-fopid.mu = 0.85*ones(6,1);
+fopid.Kp = [56.2 189.6 79.25 5.187 1.759 39.57].';
+fopid.Ki = [3.744 13.27 5.593 0.3769 0.1509 3.957].';
+fopid.Kd = [38.19 65.93 36.83 6.612 0.6604 2.46].';
+fopid.lambda = 1.1*ones(6,1);
+fopid.mu = 1.1*ones(6,1);
 
 %% GWO settings
 % Standard GWO (Mirjalili 2014). Fitness is closed-loop ITAE on the same
 % step trajectory and plant. Search uses a coarser Ts (tuneTs) only to make
 % the swarm evaluations tractable; all printed metrics are full cfg.Ts.
 gwo.enabled = true;
-gwo.fastMode = false;  % Full deep optimization search
+gwo.fastMode = false;  % Deep maximum optimization search
 if gwo.fastMode
     gwo.nWolves = 4;
     gwo.maxIter = 6;
     gwo.tuneTs = 0.02;
 else
-    gwo.nWolves = 10;
-    gwo.maxIter = 15;
+    gwo.nWolves = 20;
+    gwo.maxIter = 25;
     gwo.tuneTs = 0.005;  % Finer grid matching simulation timestep
 end
 gwo.rngSeed = 42;
