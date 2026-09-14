@@ -154,6 +154,12 @@ tau(t) = Kp * e(t) + Ki * integral(e) + Kd * de/dt
 tau(t) = Kp * e(t) + Ki * D^(-lambda) e(t) + Kd * D^(mu) e(t)
 ```
 
+Both controllers use model-based gravity compensation in the paper-style
+experiments. The feedforward term `G(q)` is added to the PID/FOPID torque
+before torque saturation, so the static gravity load does not need to be
+rejected by the feedback gains alone. Set `cfg.useGravityCompensation` to
+`false` to reproduce the uncompensated behavior.
+
 ## Relationship to the research paper
 
 The paper describes a Lagrange-based rigid-body model and gives the physical parameters of Table 2. It does **not** publish a complete DH table, COM locations or the numerical friction coefficients. Consequently:

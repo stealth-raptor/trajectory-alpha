@@ -18,6 +18,7 @@ cfg.dq0 = zeros(6,1);
 cfg.tauLimit = 250*ones(6,1);
 cfg.integratorLimit = 100*ones(6,1);
 cfg.useTorqueSaturation = true;
+cfg.useGravityCompensation = true;
 cfg.integrationMethod = 'rk4';
 
 cfg.friction.viscous = 0.05*ones(6,1);

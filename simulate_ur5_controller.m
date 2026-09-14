@@ -120,6 +120,15 @@ for k = 1:n-1
 
     tau = tau(:);
 
+    % Gravity compensation is applied as model-based feedforward torque.
+    if isfield(cfg,'useGravityCompensation') && cfg.useGravityCompensation
+        if ~isfield(plant,'gravity')
+            error('simulate_ur5_controller:MissingGravityMap', ...
+                'Gravity compensation requires plant.gravity(q).');
+        end
+        tau = tau + plant.gravity(qk);
+    end
+
     %% --------------------------------------------------------
     % Torque saturation
     % --------------------------------------------------------

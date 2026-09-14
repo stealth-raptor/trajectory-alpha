@@ -94,6 +94,18 @@ else
     fprintf('      assumption when all links are aligned with the base axes; not necessarily an error.\n\n');
 end
 
+% Gravity compensation must cancel the model gravity term at rest.
+q_gravity = [0.3; -0.5; 0.8; -0.2; 0.4; -0.1];
+qdd_gravity = plant.accel(q_gravity, zeros(6,1), plant.gravity(q_gravity));
+if norm(qdd_gravity, inf) < 1e-10
+    fprintf('PASS: Gravity compensation cancels static acceleration (||qdd||inf = %.3e).\n\n', ...
+        norm(qdd_gravity, inf));
+else
+    fprintf('FAIL: Gravity compensation residual is %.3e.\n\n', ...
+        norm(qdd_gravity, inf));
+    all_ok = false;
+end
+
 % ------------------------------------------------------------------
 % 5. Coupling demonstration: change of one joint affects another joint's accel
 % ------------------------------------------------------------------

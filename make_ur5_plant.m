@@ -39,6 +39,9 @@ plant.friction    = cfg.friction;
 % Acceleration map required by the existing simulator
 plant.accel = @(q, dq, tau) paper_accel(q, dq, tau, cfg.friction);
 
+% Gravity feedforward map used by the controller
+plant.gravity = @(q) paper_gravity(q, cfg.friction);
+
 end
 
 % -------------------------------------------------------------------------
@@ -66,4 +69,11 @@ if any(~isfinite(qdd))
     error('paper_accel:NonFinite', ...
         'Non-finite acceleration produced at q = [%s].', sprintf(' %.4g', q));
 end
+end
+
+% -------------------------------------------------------------------------
+function G = paper_gravity(q, friction)
+% Return the model gravity torque without recomputing controller dynamics.
+[~, ~, G, ~] = paper_lagrange_ur5(q, zeros(6,1), friction);
+G = G(:);
 end
