@@ -186,34 +186,27 @@ end
 end
 
 function Cqd = christoffel_Cqd(q, qd, M0, a, d, alpha, m, I_com, com_rel)
-% Assemble C*qd from Christoffel symbols of the first kind using
-% central finite differences of the inertia matrix.
+% Assemble C*qd from Christoffel symbols using vector tensor formulation:
+%   (C*qd)_i = (Mdot*qd)_i - 0.5 * (qd.' * (dM/dq_i) * qd)
+% where Mdot = sum_k (dM/dq_k * qd_k).
 
 n   = 6;
 eps = 1e-7;
-Cqd = zeros(n,1);
-
-% Pre-compute all partial derivatives dM/dq_k
 dM = cell(n,1);
+Mdot = zeros(n,n);
+
 for k = 1:n
     qp = q; qp(k) = qp(k) + eps;
     qm = q; qm(k) = qm(k) - eps;
     Mp = inertia_only(qp, a, d, alpha, m, I_com, com_rel);
     Mm = inertia_only(qm, a, d, alpha, m, I_com, com_rel);
     dM{k} = (Mp - Mm) / (2*eps);
+    Mdot = Mdot + dM{k} * qd(k);
 end
 
-% Christoffel: c_ijk = 1/2 (dM_ik/dq_j + dM_ij/dq_k - dM_jk/dq_i)
-% C_ij = sum_k c_ijk * qd_k
+Cqd = Mdot * qd;
 for i = 1:n
-    for j = 1:n
-        c_ij = 0;
-        for k = 1:n
-            c_ijk = 0.5 * (dM{j}(i,k) + dM{k}(i,j) - dM{i}(j,k));
-            c_ij  = c_ij + c_ijk * qd(k);
-        end
-        Cqd(i) = Cqd(i) + c_ij * qd(j);
-    end
+    Cqd(i) = Cqd(i) - 0.5 * (qd.' * dM{i} * qd);
 end
 end
 

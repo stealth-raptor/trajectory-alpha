@@ -3,24 +3,22 @@ function [If,Df,bank] = oustaloup_step_bank(bank,e)
 % Cascaded first-order Tustin sections are used for speed and numerical
 % stability during repeated controller simulations.
 
-nJ = numel(e);
-If = zeros(nJ,1);
-Df = zeros(nJ,1);
+vI = e(:);
+nSec = size(bank.I_b0, 2);
+for r = 1:nSec
+    yI = bank.I_b0(:,r).*vI + bank.I_b1(:,r).*bank.I_u1(:,r) - bank.I_a1(:,r).*bank.I_y1(:,r);
+    bank.I_u1(:,r) = vI;
+    bank.I_y1(:,r) = yI;
+    vI = yI;
+end
+If = bank.I_K .* vI;
 
-for j = 1:nJ
-    [If(j),bank.I{j}] = filter_step(bank.I{j},e(j));
-    [Df(j),bank.D{j}] = filter_step(bank.D{j},e(j));
+vD = e(:);
+for r = 1:nSec
+    yD = bank.D_b0(:,r).*vD + bank.D_b1(:,r).*bank.D_u1(:,r) - bank.D_a1(:,r).*bank.D_y1(:,r);
+    bank.D_u1(:,r) = vD;
+    bank.D_y1(:,r) = yD;
+    vD = yD;
 end
-end
-
-function [y,f] = filter_step(f,u)
-% Cascade the 11 first-order sections.
-v = u;
-for r = 1:numel(f.b0)
-    y = f.b0(r)*v + f.b1(r)*f.u1(r) - f.a1(r)*f.y1(r);
-    f.u1(r) = v;
-    f.y1(r) = y;
-    v = y;
-end
-y = f.K*v;
+Df = bank.D_K .* vD;
 end
