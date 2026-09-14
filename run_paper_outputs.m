@@ -1,8 +1,8 @@
 %% RUN_PAPER_OUTPUTS
-% Generate the PID-versus-FOPID results used for the paper-style comparison.
-%
-% The paper reports six-joint step and sine comparisons. Some numerical
-% experiment details are not published, so the assumptions are kept visible.
+% Generate the PID-versus-FOPID results used for the paper-style comparison,
+% then tune the same controllers with a standard Grey Wolf Optimizer (GWO)
+% using the paper ITAE fitness. Plant, controller, trajectories, simulation
+% settings and metric definitions are unchanged.
 
 clear; clc; close all;
 
@@ -45,6 +45,18 @@ fopid.Kd = [22.1 18.4 14.8 8.61 4.92 2.46].';
 fopid.lambda = 0.85*ones(6,1);
 fopid.mu = 0.85*ones(6,1);
 
+%% GWO settings
+% Standard GWO (Mirjalili 2014). Fitness is closed-loop ITAE on the same
+% step trajectory and plant. Search uses a coarser Ts (tuneTs) only to make
+% the swarm evaluations tractable; all printed metrics are full cfg.Ts.
+% Increase nWolves/maxIter or set tuneTs=[] for a longer/full-rate search.
+gwo.enabled = true;
+gwo.nWolves = 8;
+gwo.maxIter = 12;
+gwo.rngSeed = 42;
+gwo.tuneTs = 0.01;
+gwo.useCache = true;
+
 %% Plant and references
 plant = make_ur5_plant(cfg);
 t = (0:cfg.Ts:cfg.Tfinal).';
@@ -60,7 +72,7 @@ fprintf('Step: %.3f rad at %.2f s\n', ...
 fprintf('Sine: %.3f rad amplitude at %.3f Hz\n', ...
     cfg.sineAmplitude,cfg.sineFrequencyHz);
 
-fprintf('\nUsing hardcoded PID/FOPID gains; no optimizer is used.\n');
+fprintf('\nBaseline PID/FOPID use hardcoded gains; GWO then retunes copies of those gains.\n');
 
 %% Run the two controllers
 fprintf('\nRunning PID step response...\n');
@@ -83,6 +95,81 @@ fprintf('\nSTEP SUMMARY\n');
 disp(stepSummary);
 fprintf('\nSINE SUMMARY\n');
 disp(sineSummary);
+
+%% GWO-PID and GWO-FOPID (same plant, trajectories, cfg, metrics)
+gwoPid = pid;
+gwoFopid = fopid;
+gwoPidTune = [];
+gwoFopidTune = [];
+
+if gwo.enabled
+    gwoCacheFile = fullfile(pwd,'outputs','paper','results','gwo_pid_fopid_cache.mat');
+    loadedCache = false;
+    if gwo.useCache && exist(gwoCacheFile,'file')
+        cache = load(gwoCacheFile);
+        if isfield(cache,'gwo') && isequal(cache.gwo.nWolves,gwo.nWolves) ...
+                && isequal(cache.gwo.maxIter,gwo.maxIter) ...
+                && isequal(cache.gwo.rngSeed,gwo.rngSeed) ...
+                && isequal(cache.gwo.tuneTs,gwo.tuneTs)
+            gwoPid = cache.gwoPid;
+            gwoFopid = cache.gwoFopid;
+            gwoPidTune = cache.gwoPidTune;
+            gwoFopidTune = cache.gwoFopidTune;
+            loadedCache = true;
+            fprintf('\nLoaded cached GWO gains from %s\n',gwoCacheFile);
+        end
+    end
+
+    if ~loadedCache
+        fprintf('\nRunning GWO-PID on step ITAE (%d wolves, %d iterations)...\n', ...
+            gwo.nWolves,gwo.maxIter);
+        [gwoPid,gwoPidTune] = gwo_optimize_controller( ...
+            plant,t,qStep,'PID',pid,cfg,gwo);
+
+        fprintf('\nRunning GWO-FOPID on step ITAE (%d wolves, %d iterations)...\n', ...
+            gwo.nWolves,gwo.maxIter);
+        [gwoFopid,gwoFopidTune] = gwo_optimize_controller( ...
+            plant,t,qStep,'FOPID',fopid,cfg,gwo);
+    end
+else
+    fprintf('\nGWO disabled; GWO-PID/GWO-FOPID reuse the hardcoded baselines.\n');
+end
+
+fprintf('\nRunning GWO-PID step response...\n');
+gwoPidStep = simulate_ur5_controller(plant,t,qStep,'PID',gwoPid,cfg);
+fprintf('Running GWO-FOPID step response...\n');
+gwoFopidStep = simulate_ur5_controller(plant,t,qStep,'FOPID',gwoFopid,cfg);
+fprintf('Running GWO-PID sine response...\n');
+gwoPidSine = simulate_ur5_controller(plant,t,qSine,'PID',gwoPid,cfg);
+fprintf('Running GWO-FOPID sine response...\n');
+gwoFopidSine = simulate_ur5_controller(plant,t,qSine,'FOPID',gwoFopid,cfg);
+
+[stepMetricsGwo,stepSummaryGwo] = make_step_metrics( ...
+    t,qStep,gwoPidStep.q,gwoFopidStep.q,gwoPidStep.tau,gwoFopidStep.tau);
+[sineMetricsGwo,sineSummaryGwo] = make_sine_metrics( ...
+    t,qSine,gwoPidSine,gwoFopidSine);
+
+stepSummaryGwo.Controller = ["GWO-PID";"GWO-FOPID"];
+sineSummaryGwo.Controller = ["GWO-PID";"GWO-FOPID"];
+stepMetricsGwo.Controller = renameGwoControllers(stepMetricsGwo.Controller);
+sineMetricsGwo.Controller = renameGwoControllers(sineMetricsGwo.Controller);
+
+printFourWayComparison( ...
+    t,qStep,qSine, ...
+    pidStep,fopidStep,gwoPidStep,gwoFopidStep, ...
+    pidSine,fopidSine,gwoPidSine,gwoFopidSine, ...
+    stepSummary,stepSummaryGwo,sineSummary,sineSummaryGwo);
+
+fprintf('\nGWO-PID best gains (Kp, Ki, Kd):\n');
+disp([gwoPid.Kp, gwoPid.Ki, gwoPid.Kd]);
+fprintf('GWO-FOPID best gains (Kp, Ki, Kd, lambda, mu):\n');
+disp([gwoFopid.Kp, gwoFopid.Ki, gwoFopid.Kd, gwoFopid.lambda, gwoFopid.mu]);
+if ~isempty(gwoPidTune) && isfield(gwoPidTune,'bestFitness')
+    fprintf('GWO-PID best step ITAE = %.6g\n',gwoPidTune.bestFitness);
+end
+if ~isempty(gwoFopidTune) && isfield(gwoFopidTune,'bestFitness')
+    fprintf('GWO-FOPID best step ITAE = %.6g\n',gwoFopidTune.bestFitness);
+end
 
 %% Output folders
 outRoot = fullfile(pwd,'outputs','paper');
@@ -181,15 +268,110 @@ writetable(sineMetrics,fullfile(sineMetricRoot,'sine_joint_metrics.csv'));
 writetable(sineSummary,fullfile(sineMetricRoot,'sine_summary_metrics.csv'));
 
 save(fullfile(resultRoot,'paper_pid_fopid_results.mat'), ...
-    'cfg','plant','pid','fopid','t','qStep','qSine', ...
-    'pidStep','fopidStep','pidSine','fopidSine', ...
-    'stepMetrics','stepSummary','sineMetrics','sineSummary');
+    'cfg','plant','pid','fopid','gwo','gwoPid','gwoFopid', ...
+    'gwoPidTune','gwoFopidTune','t','qStep','qSine', ...
+    'pidStep','fopidStep','gwoPidStep','gwoFopidStep', ...
+    'pidSine','fopidSine','gwoPidSine','gwoFopidSine', ...
+    'stepMetrics','stepSummary','sineMetrics','sineSummary', ...
+    'stepMetricsGwo','stepSummaryGwo','sineMetricsGwo','sineSummaryGwo');
 
-fprintf('\nSaved paper-style PID/FOPID results under outputs/paper/\n');
+if gwo.enabled && ~isempty(gwoPidTune) && ~isempty(gwoFopidTune)
+    save(fullfile(resultRoot,'gwo_pid_fopid_cache.mat'), ...
+        'gwo','gwoPid','gwoFopid','gwoPidTune','gwoFopidTune');
+
+    gwoFigRoot = fullfile(outRoot,'gwo','figures');
+    if ~exist(gwoFigRoot,'dir')
+        mkdir(gwoFigRoot);
+    end
+    fig = figure('Visible','off','Color','w');
+    plot(1:numel(gwoPidTune.fitnessHistory),gwoPidTune.fitnessHistory, ...
+        'LineWidth',1.2); hold on;
+    plot(1:numel(gwoFopidTune.fitnessHistory),gwoFopidTune.fitnessHistory, ...
+        'LineWidth',1.2);
+    grid on; box on;
+    xlabel('Iteration'); ylabel('Best ITAE');
+    title('GWO convergence (step ITAE)');
+    legend('GWO-PID','GWO-FOPID','Location','best');
+    saveFigure(fig,gwoFigRoot,'gwo_itae_convergence');
+end
+
+writetable(stepMetricsGwo,fullfile(stepMetricRoot,'step_joint_metrics_gwo.csv'));
+writetable(stepSummaryGwo,fullfile(stepMetricRoot,'step_summary_metrics_gwo.csv'));
+writetable(sineMetricsGwo,fullfile(sineMetricRoot,'sine_joint_metrics_gwo.csv'));
+writetable(sineSummaryGwo,fullfile(sineMetricRoot,'sine_summary_metrics_gwo.csv'));
+
+fprintf('\nSaved paper-style PID/FOPID and GWO results under outputs/paper/\n');
 
 %% Local helper
 function saveFigure(fig,folder,baseName)
 print(fig,fullfile(folder,[baseName,'.png']),'-dpng','-r300');
 savefig(fig,fullfile(folder,[baseName,'.fig']));
 close(fig);
+end
+
+function names = renameGwoControllers(names)
+names = string(names);
+names(names=="PID") = "GWO-PID";
+names(names=="FOPID") = "GWO-FOPID";
+end
+
+function printFourWayComparison( ...
+    t,qStep,qSine, ...
+    pidStep,fopidStep,gwoPidStep,gwoFopidStep, ...
+    pidSine,fopidSine,gwoPidSine,gwoFopidSine, ...
+    stepSummary,stepSummaryGwo,sineSummary,sineSummaryGwo)
+
+labels = ["PID","FOPID","GWO-PID","GWO-FOPID"];
+qStepAll = {pidStep.q,fopidStep.q,gwoPidStep.q,gwoFopidStep.q};
+qSineAll = {pidSine.q,fopidSine.q,gwoPidSine.q,gwoFopidSine.q};
+stepTab = [stepSummary; stepSummaryGwo];
+sineTab = [sineSummary; sineSummaryGwo];
+stepTab.Controller = string(stepTab.Controller);
+sineTab.Controller = string(sineTab.Controller);
+
+itaeStep = zeros(4,1);
+itaeSine = zeros(4,1);
+for k = 1:4
+    itaeStep(k) = compute_itae(t,qStep,qStepAll{k});
+    itaeSine(k) = compute_itae(t,qSine,qSineAll{k});
+end
+
+fprintf('\n============================================================\n');
+fprintf('FOUR-WAY COMPARISON  (PID, FOPID, GWO-PID, GWO-FOPID)\n');
+fprintf('ITAE is the paper fitness on the same trajectories.\n');
+fprintf('Step metrics: overshoot, settling time, peak time, |tau|.\n');
+fprintf('Sine metrics: MSE and |tau|.\n');
+fprintf('============================================================\n');
+fprintf('%-10s %12s %12s %8s %8s %8s %12s %14s\n', ...
+    'Ctrl','ITAE_step','ITAE_sine','OS_%','ts_s','tp_s','MSE_rad2','|tau|_sine');
+
+for k = 1:4
+    sIdx = find(stepTab.Controller==labels(k),1);
+    nIdx = find(sineTab.Controller==labels(k),1);
+    fprintf('%-10s %12.6g %12.6g %8.3f %8.3f %8.3f %12.6g %14.6g\n', ...
+        labels(k),itaeStep(k),itaeSine(k), ...
+        stepTab.AverageOvershoot_percent(sIdx), ...
+        stepTab.AverageSettlingTime_s(sIdx), ...
+        stepTab.AveragePeakTime_s(sIdx), ...
+        sineTab.AverageMSE_rad2(nIdx), ...
+        sineTab.AverageMeanAbsTorque_Nm(nIdx));
+end
+
+fprintf('\nStep average |tau| (N m):\n');
+for k = 1:4
+    sIdx = find(stepTab.Controller==labels(k),1);
+    fprintf('  %-10s  %.6g\n',labels(k),stepTab.AverageAbsTorque_Nm(sIdx));
+end
+
+if isfield(pidStep,'tau')
+    % Keep the original per-controller summary tables visible as well.
+    fprintf('\nSTEP SUMMARY (PID / FOPID)\n');
+    disp(stepSummary);
+    fprintf('STEP SUMMARY (GWO-PID / GWO-FOPID)\n');
+    disp(stepSummaryGwo);
+    fprintf('SINE SUMMARY (PID / FOPID)\n');
+    disp(sineSummary);
+    fprintf('SINE SUMMARY (GWO-PID / GWO-FOPID)\n');
+    disp(sineSummaryGwo);
+end
 end
