@@ -13,11 +13,9 @@ FBPA optimization, standalone debug scripts, standalone test scripts and duplica
 run_paper_outputs
 ```
 
-On the first run, the script performs the bounded PID/FOPID gain search and
-saves the result to `tuned_pid_fopid_gains.mat`. Later runs load that file and
-reuse the same gains without repeating optimization. To intentionally tune
-again, set `cfg.forceRetune = true` in `run_paper_outputs.m`, run once, then
-set it back to `false`.
+The PID and FOPID gains are hardcoded directly in `run_paper_outputs.m`. The
+project does not run an optimizer; changing the gains is an intentional manual
+experiment.
 
 This generates the paper-style step and sine tracking results for PID and FOPID.
 
@@ -99,7 +97,7 @@ The output includes:
 
 The only experiment script. It defines the simulation settings and baseline gains, creates step and sine references, runs PID and FOPID, calculates metrics, creates figures and saves all outputs.
 
-It does not load or generate FBPA data.
+It does not load or generate FBPA data or optimized gain files.
 
 ### `make_ur5_plant.m`
 
