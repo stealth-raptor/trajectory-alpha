@@ -225,22 +225,6 @@ try
         return;
     end
     J = compute_itae(t,qRef,result.q);
-    
-    % Overshoot penalty: penalize overshoot above 15% for balanced optimal control
-    mask = t >= cfg.stepTime;
-    osTotal = 0;
-    for j = 1:6
-        tgt = qRef(end,j);
-        if abs(tgt) > 1e-6
-            pk = max(result.q(mask,j));
-            os = max(0, (pk - tgt)/tgt * 100);
-            if os > 15
-                osTotal = osTotal + 0.08 * (os - 15)^1.5;
-            end
-        end
-    end
-    J = J + osTotal;
-    
     if ~isfinite(J)
         J = inf;
     end
