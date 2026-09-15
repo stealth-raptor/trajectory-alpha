@@ -1,0 +1,1122 @@
+=== PAGE 1 ===
+International Journal of Dynamics and Control (2025) 13:137
+https://doi.org/10.1007/s40435-025-01620-x
+Trajectory tracking control of a 6-DOF robotic arm based on improved
+FOPID
+Zhou Jiang1 · Xiaohua Zhang2 · Guoquan Liu3
+Received: 29 September 2024 / Revised: 8 January 2025 / Accepted: 17 February 2025 / Published online: 31 March 2025
+© The Author(s), under exclusive licence to Springer-Verlag GmbH Germany, part of Springer Nature 2025
+Abstract
+Robotic arm is a complex system with multiple inputs and outputs, strong nonlinearity and strong coupling, and the research
+of high precision trajectory tracking control technology for robotic arm has been an important issue for scholars at home and
+abroad. This paper takes the six-degree-of-freedom (6-DOF) robotic arm as its study object and designs a fractional-order
+PID (FOPID) control method. To improve its control accuracy, a parameter tuning method of fractional-order beetle antennae
+particle swarm algorithm (FBPA) optimized FOPID controller is proposed. This method puts the beetle antennae search
+(BAS) algorithm together with the particle swarm optimization (PSO) algorithm, introduces the concept of fractional-order
+calculus into the algorithm, dynamically adjusts the inertial weights and fractional order and ﬁnally improves the optimization
+effect of the algorithm. The simulation experiments of MATLAB/Simulink indicate that in comparison with the traditional
+PID control method, the FOPID control method optimized by the FBPA has high control accuracy and small overshooting,
+which meets the high-precision control requirements of the 6-DOF robotic arm.
+Keywords 6-DOF robotic arm · Trajectory tracking · Optimization algorithm · FOPID controller
+1 Introduction
+In the context of the new era of industrial revolution, the
+application of robotic arms has been increasing signiﬁcantly,
+due to their high intelligence, ability to perceive the external
+environment and repeatable programming. Therefore, their
+demand in medical care, military, industrial manufacturing,
+etc., is increasing year by year [1, 2]. However, as a complex
+mechanism system with multiple inputs and outputs, strong
+coupling and strong nonlinearity, the robotic arm often has
+uncertain factors during movement such as external inter-
+ference and measurement errors. Its end position sometimes
+completely deviates from the preset reference trajectory, and
+B Zhou Jiang
+jiangzhou19890215@163.com
+1
+Department of Mechanical and Electrical Engineering, Anhui
+Automobile Vocational and Technical College, Hefei 230601,
+Anhui, People’s Republic of China
+2
+College of Automation, Zhongkai University of Agriculture
+and Engineering, Guangzhou 510225, Guangdong, People’s
+Republic of China
+3
+School of Mechanical and Electronic Engineering, East China
+University of Technology, Guanglan Avenue 418, Nanchang
+330013, People’s Republic of China
+thus, one difﬁcult point to study robot arm is the trajectory
+tracking control method.
+When it comes to the domain of industrial robots, PID
+control is a model-independent control method with a simple
+controller structure and wide application [3]. However, it has
+problems such as static error, slow response time and unsta-
+ble output in tracking control. In addition, PID controllers
+rely on the numerical model of the controlled system, but
+sometimes the system is highly nonlinear or has time-varying
+uncertainties, the parameter tuning process is complex, and
+thus, it is difﬁcult to accurately model and has poor adapt-
+ability to different working conditions. When there is noise
+or external interference in the control system, poor tuning
+and poor performance may occur.
+In order to break the limitations of PID controllers, the
+academic community has widely adopted computational
+intelligence technologies such as genetic algorithms, fuzzy
+logic control and neural networks to control robots and
+complex nonlinear systems. Hybrid methods to combine
+PID controllers with other control methods have also been
+adopted [4–6]. Recently, fractional-order calculus theory has
+gradually been applied to controller design research. FOPID
+controllers not only have some characteristics of traditional
+integer-order PID controllers, but also have certain advan-
+123
+
+=== PAGE 2 ===
+137
+Page 2 of 14
+Z. Jiang et al.
+tages in control accuracy and anti-interference ability. This
+also provides a new idea for the selection and implementation
+of robotic arm trajectory tracking.
+In comparison with the traditional PID controller, the
+FOPID controller increases the selection of integral-order λ
+and differential-order μ and has better robustness and control
+effect, but at the same time, it makes parameter adjustment
+more complicated. How to apply the FOPID controller to
+the ﬁeld of industrial control and perform parameter opti-
+mization has become a research hotspot. At present, scholars
+at home and abroad are committed to the study of param-
+eter tuning of FOPID controllers using swarm intelligence
+optimization algorithms. Reference [7] designed a FOPID
+controller based on the gray wolf optimization algorithm
+and applied it to the DFIG wind farm and achieved good
+control effect. Reference [8] uses the whale optimization
+algorithm to optimize the parameters of the FOPID controller
+and applies it to load frequency control of the power system.
+The performance of the whale algorithm is compared with
+other optimization methods through simulation experiments.
+According to the results, the FOPID controller optimized by
+the whale algorithm has the advantages of small overshoot
+and short adjustment time.
+The 6-DOF robotic arm is composed of six connecting
+rods in series, which is suitable for working at any angle or
+trajectory. Due to the rapid development of computer tech-
+nology, the control of 6-DOF robotic arm needs more and
+higher requirements. Today’s control methods are combined
+with advanced control algorithms to better handle the 6-DOF
+robotic arm’s own errors and external disturbances. Refer-
+ence [9] used a new vision-based calibration framework to
+maintain the accuracy of a 6-DOF robotic arm and achieved
+good results. Reference [10] used the frequency response
+function to improve the cutting stability of a 6-DOF machin-
+ing robot. Reference [11] solved the movement problem of
+a 6-DOF robotic arm in complex scenes by applying a deep
+reinforcement learning method. Reference [12] used grey
+wolf optimization algorithm to implement the optimal tra-
+jectory generation method for a 6-DOF parallel robotic arm.
+Reference [13] applied grey wolf algorithm to the inverse
+kinematics analysis of a 6-DOF oil and gas pipeline welding
+robotic arm and achieved good results.
+This paper mainly studies the design and application of
+FOPID based on FBPA, and the main contributions are as
+follows: Firstly, the BAS algorithm is introduced based on
+the PSO algorithm, with fractional calculus incorporated into
+the velocity iteration update formula, leading to the pro-
+posed FBPA. The results indicate that in comparison with
+the traditional optimization methods, the FBPA improves the
+convergence speed and accuracy to a great extent. Secondly,
+in view of the complexity and uncertainty of FOPID param-
+eter tuning, the FBPA is used to optimize and tune FOPID
+parameters. Finally, trajectory tracking experiments are car-
+ried out to verify the effectiveness of the FBPA and to prove
+that FOPID has higher control accuracy with a 6-DOF robotic
+arm.
+2 Preliminaries
+This section introduces the deﬁnition of fractional-order cal-
+culus, the deﬁnitions related to FOPID and the mathematical
+model used for establishing a 6-DOF robotic arm.
+2.1 Fractional-order calculus
+A uniform operator of fractional-order calculus will be
+introduced here, where α is the order of integration or dif-
+ferentiation, t is the independent variable, and t0 is the lower
+bound of this variable. The speciﬁc expression form is as
+follows:
+t0 Dα
+t f (t) =
+⎧
+⎨
+⎩
+dα
+dtα f (t),
+α > 0
+f (t),
+α = 0
+ t
+t0 f (τ)dτ −α, α < 0
+(1)
+where t0 Dα
+t f (t) denotes the α-order derivative of the func-
+tion concerning the independent variable t if α > 0; α = 0
+denotes the original signal; and −α denotes the order integral
+if α < 0.
+The fractional-order calculus has many deﬁnitions: start-
+ing from the n-fold deﬁnition to other different variants
+related to the deﬁnition. The three most commonly used deﬁ-
+nitions in control systems are: the Grünwald–Letnikov (G-L)
+deﬁnition, the Riemann–Liouville (R-L) deﬁnition and the
+Caputo deﬁnition [14].
+The Grünwald–Letnikov (G-L) deﬁnition:
+t0Dα
+t = lim
+h→0
+1
+hα
+ t−t0
+h
+
+
+j=0
+(−1) j
+	α
+j
+
+f (t −jh).
+(2)
+where
+ t−t0
+h
+
+is the integer part, and t0 and t are the lower
+and upper limits of the operator, respectively. The values of
+the binomial coefﬁcients are given by:
+	α
+j
+
+=
+(α + 1)
+( j + 1) · (α −j + 1).
+(3)
+The gamma function in the above equation can be deﬁned
+by the following equation:
+(x) =
+ ∞
+0
+tx−1e−tdt,
+x > 0.
+(4)
+123
+
+=== PAGE 3 ===
+Trajectory tracking control of a 6-DOF...
+Page 3 of 14
+137
+The Riemann–Liouville (R-L) deﬁnition:
+t0 Dα
+t f (t) =
+1
+(m −α) · dm
+dtm
+ t
+t0
+f (τ)
+(t −τ)1+α−m dτ.
+(5)
+where t and t0 refer to the upper and lower limits of the
+operator, respectively; m is an integer satisfying m −1 <
+α ≤m.
+The Caputo deﬁnition:
+t0 Dα
+t f (t) =
+1
+(n −α) · dn
+dtn
+ t
+t0
+f n(τ)
+(t −τ)1+α−n dτ.
+(6)
+where t and t0 refer to the upper and lower limits of the
+operator, respectively; n is an integer satisfying n −1 < α ≤
+n.
+2.2 PID controller and FOPID controller
+Based on the feedback concept in traditional control theory,
+a PID controller is designed to achieve effective control of
+the system by adjusting three key parameters. The purpose
+of the controller is to ensure that the output signal can accu-
+rately follow the input signal [15]. PID controller’s structure
+is shown in Fig. 1:
+The input of the PID controller is the error e(t), which is
+deﬁned as follows:
+e(t) = r(t) −y(t).
+(7)
+where r(t) is the desired value, y(t) is the system output
+value, and e(t) is the error value. The transfer function of the
+PID control system can be expressed as:
+GC(s) = U(s)
+E(s) = K p + Ki
+s + Kds.
+(8)
+where K p, Ki, Kd are the proportional coefﬁcient, integral
+coefﬁcient and differential coefﬁcient, respectively.
+The transfer function of the FOPID controller is:
+GC(s) = K p + Ki
+sλ + Kdsμ.
+(9)
+where λ, μ are all greater than 0.
+Compared with the traditional PID controller, there are
+two more adjustable parameters for the FOPID controller,
+the integral-order λ and the differential-order μ, and there-
+fore have better control effect [16–18]. In addition, it shows
+stronger adaptability, can reﬂect the characteristics of non-
+linear dynamic systems more accurately and is suitable for
+various types of systems. However, the additional parame-
+ters will also make its parameter setting more complicated,
+so the intelligent optimization algorithm is adopted to real-
+ize the parameter setting of the FOPID controller. Figure 2
+illustrates FOPID controller’s structure diagram.
+2.3 Establishing the dynamic model of the 6-DOF
+robotic arm
+The purpose of this paper is to design an improved FOPID
+controller to achieve high-performance tracking control for a
+6-DOFroboticarm.TheUR5roboticarm,a6-DOFindustrial
+robot, is used as the modeling object, as shown in Fig. 3. In
+this section, the Lagrange modeling method is employed to
+establish the dynamic model of the UR5 robotic arm. This
+model is then used as the controlled object in simulations to
+verify the effectiveness of the proposed FOPID controller.
+TheLagrangefunctionoftheroboticarmsystemisdeﬁned
+as follows [19]:
+L = K −P.
+(10)
+where L represents the Lagrange function, K is the system
+kinetic energy, and P is the system potential energy. The
+model equation of the system dynamics state is as follows:
+τi = d
+dt
+∂L
+∂˙qi
+−∂L
+∂qi
+, i = 1, 2...n.
+(11)
+where τi is the generalized force or generalized torque acting
+on the i-th generalized coordinate, qi refers to the angle of
+the i-th joint, and ˙qi is the corresponding angular velocity of
+the i-th joint.
+d
+dt
+∂L
+∂˙q −∂K
+∂q + ∂P
+∂q = τ.
+(12)
+(1) Calculate the total kinetic energy K. Set the velocity of
+any point on connecting rod i as follows:
+v =
+i
+j=1
+	 ∂Ti
+∂q j
+˙q j
+
+i
+r.
+(13)
+The position vector of point ir on link i is given, where
+the mass is dm. The kinetic energy of link i at this point is
+calculated as:
+dKi = 1
+2v2dm = 1
+2 tr
+i
+j=i
+i
+k=1
+∂Ti
+∂q j
+ irdmir T T
+∂T T
+i
+∂qk ˙q j ˙qk
+
+dm.
+(14)
+By summing the kinetic energy of n connecting rods, we
+can know the kinetic energy of the system at a certain rod;
+123
+
+=== PAGE 4 ===
+137
+Page 4 of 14
+Z. Jiang et al.
+Fig. 1 The structure of PID
+controller
+Fig. 2 The structure of FOPID
+controller
+that is, the total kinetic energy of the robotic arm system is:
+K =
+
+dKi
+= 1
+2
+n
+
+i=1
+i
+j=1
+i
+k=1
+tr
+
+∂0
+i T
+∂q j
+Ii
+∂0
+i T T
+∂qk
+
+˙q j ˙qk.
+(15)
+where Ii represents the pseudo-inertia matrix.
+(2) Calculate the total potential energy P. Deﬁne the position
+vector ir on the connecting rod i, whose mass is dm and
+whose potential energy at this point is:
+d Pi = −dmgT 0r = −gT Ti irdm.
+(16)
+where gT =
+
+gx gy gz 1
+
+.
+The total potential energy of a robotic arm with n links is
+the sum of the potential energies of each link:
+P =
+n
+
+i=1
+Pi = −
+n
+
+i=1
+migT Ti iri.
+(17)
+Substituting the total kinetic energy and total potential
+energy formula of the n-DOF manipulator into the formula,
+the Lagrange dynamic equation is obtained:
+L = K −P
+Fig. 3 The UR5 Robotic Arm
+= 1
+2
+n
+
+i=1
+i
+j=1
+i
+k=1
+tr
+
+∂Ti
+∂q j
+Ii
+∂T T
+i
+∂qk
+
+˙q j ˙qk
++
+n
+
+i=1
+migT Ti iri.
+(18)
+The torque at the revolute joint of link i is:
+τi =
+n
+
+j=1
+Di j ¨q j + Ii ¨qi +
+n
+
+j=1
+n
+
+k=1
+Di jk ˙q j ˙qk + Di
+= M(q)¨q + C(q, C)˙q + G(q).
+(19)
+where
+Di j =
+n
+p=maxi, j tr
+	
+∂Tp
+∂q j Ip
+∂T Tp
+∂qi
+
+Di jk = n
+p=maxi, j,k tr
+	
+∂2Tp
+∂q j∂qk Ip
+∂T T
+p
+∂qi
+
+Di =
+n
+p=i −m pgT ∂Tp
+∂qi prp
+(20)
+where q,˙q,¨q ∈Rn are the manipulator joint angle vec-
+tor, angular velocity vector, and angular acceleration vector,
+respectively; M(q) = Di j ∈Rm×n is the positive deﬁnite
+123
+
+=== PAGE 5 ===
+Trajectory tracking control of a 6-DOF...
+Page 5 of 14
+137
+inertia matrix, C(q, ˙q) = Di jk ∈Rn×n refers to the cen-
+tripetalforceandCoriolisforcematrix,and G(q) = Di ∈Rn
+refers to the gravity matrix. τ ∈Rn stands for the control
+input matrix of the manipulator system.
+In addition, considering the friction between the joints of
+the robotic arm system, the ﬁnal dynamics model of the 6-
+DOF robotic arm is expressed as
+M(q) + C(q, ˙q) + G(q) + τ f (˙q) = τ
+(21)
+where τ f (˙q) = [τ f 1(˙q1), · · · , τ f i(˙qi)], i = 1, · · · , n repre-
+sents the friction vector, and τ f i(˙qi) = fcisgn(˙qi) + bi ˙qi
+with fci and bi being friction parameters.
+3 Fractional-order beetle antennae particle
+swarm algorithm
+3.1 Improved PSO algorithm
+The PSO algorithm is one of the most famous group-based
+optimization algorithms. It simulates the social behavior of
+birdﬂockstogetfood.Combiningindividualandsocialexpe-
+rience, this group of birds approach their food, continuously
+change their position according to their own optimal position
+and the entire group’s optimal position and ﬁnally reform the
+optimal queue [20, 21].
+In the PSO algorithm, the updating formulas of speed and
+position are as follows:
+vk+1
+id
+= vk
+id + c1r1(t) [pid(t) −xid(t)]
++ c2r2(t)
+
+pgd(t) −xid(t)
+
+xk+1
+id
+= xk
+id + vk+1
+id .
+(22)
+where k refers to the number of iterations, vk
+id and xk
+id are
+the velocity and position of the i−th particle in the d−th
+dimension, c1 and c2 refer to learning factors, r1 and r2 refer
+to two random numbers uniformly distributed between [0,1],
+and pid(t) and pgd(t) stand for the best historical positions
+of individual and group particles.
+Because the particles run at a high speed, the traditional
+PSO algorithm is often prone to premature convergence.
+Since its birth in 1995, researchers have attempted to improve
+the traditional PSO algorithm in various ways and derive
+new versions. In order to shun the above-mentioned problem
+of premature convergence, the concept of inertia weight is
+introduced into the algorithm. The inertia weight formula is
+as follows:
+w = (wmax −wmin) ∗k
+MaxIter
+.
+(23)
+where w is the inertia weight, wmin refers to the minimum
+value of the inertia weight set, wmax refers to the maximum
+value of the inertia weight set, k stands for the current number
+of iterations, and MaxIter stands for the maximum number
+of iterations of the algorithm.
+Introducing the concept of inertia weight into the velocity
+update formula, we get an improved velocity update formula:
+vk+1
+id
+= wvk
+id + c1r1(t) [pid(t) −xid(t)]
++ c2r2(t)
+
+pgd(t) −xid(t)
+
+.
+(24)
+By introducing inertia weights, particles maintain strong
+global search capabilities in the early stages of iteration and
+help to conduct more accurate local searches in the later
+stagesofiteration,reducingparticleoscillationsandtheprob-
+ability of the population falling into pseudo-extremes [22,
+23]. Besides, this paper uses the long memory characteristics
+of fractional calculus and combines the concept of fractional
+calculus with the PSO algorithm to describe the search and
+optimization process of the particle swarm [24, 25]. Frac-
+tional calculus is introduced into the speed iteration update
+formula, and the speed state information of the particles is
+changed through the historical trajectory information of each
+particle. Finally, the speed iteration update formula of the
+fractional PSO algorithm using linearly decreasing inertia
+weights is obtained:
+vk+1
+id
+= (w −1 + a)vk
+id + 1
+2a(1 −a)vk−1
+id
++ 1
+6a(1 −a)(2 −a)vk−2
+id
++ 1
+24a(1 −a)(2 −a)(3 −a)vk−3
+id
++ c1r1(t) [pid(t) −xid(t)]
++ c2r2(t)
+
+pgd(t) −xid(t)
+
+.
+(25)
+3.2 Improved BAS algorithm
+On the basis of the function of the beetle antennae and their
+random walk mechanism, the BAS algorithm is proposed.
+According to biological research, beetles locate its food by
+the concentration of food odor; that is, they ﬁnd the global
+optimal value based on the concentration difference of food
+odor perceived by their two antennae [26–28]. The advantage
+of the BAS algorithm is that the number of populations is
+only 1 during the search process, which greatly reduces the
+amount of calculation of the algorithm. The disadvantage is
+that it falls into the local optimal situation easily [29, 30].
+In order to enhance the algorithm’s optimization ability,
+thisstudyputstheBASalgorithmtogetherwiththePSOalgo-
+rithm and proposes a beetle antennae particle swarm hybrid
+algorithm. In the beetle antennae particle swarm algorithm,
+beetles are used to replace particles; likewise, the particle
+123
+
+=== PAGE 6 ===
+137
+Page 6 of 14
+Z. Jiang et al.
+swarm takes the place of beetle swarm. The beetles update
+their positions according to two extreme values of ﬁtness val-
+ues: the optimal values searched by the beetles themselves
+and the entire beetle swarm separately. In each iteration, the
+entire beetle population moves towards the optimal solution
+of the problem.
+The speed update formula of each beetle in the beetle
+antennae particle swarm algorithm realizes the fusion of the
+speed update formula of BAS and PSO. It effectively over-
+comes the two weaknesses of PSO algorithm that it is easy to
+fall into local optimality and low algorithm accuracy. Mean-
+while, it enables the BAS algorithm not be restricted to single
+target parameterization.
+vk+1
+id
+= (w −1 + a)vk
+id + 1
+2a(1 −a)vk−1
+id
++ 1
+6a(1 −a)(2 −a)vk−2
+id
++ 1
+24a(1 −a)(2 −a)(3 −a)vk−3
+id
++ c1r1(t)
+
+pi j(t) −xi j(t)
+
++ c2r2(t)
+
+pgj(t) −xi j(t)
+
++ c3r3(t)vt
+i .
+(26)
+where c3 has the same value as c1 and c2, which reﬂects the
+inﬂuence of the search speed of the beetle on the search speed
+of the particle.
+Based on the beetle antennae particle swarm algorithm,
+the fractional-order α is introduced to make the beetle motion
+have the inherent properties of fractional calculus. The veloc-
+ity state information of the beetle is changed by the historical
+trajectory information of the fractional calculus, which can
+effectively control the velocity state of the beetle motion and
+increase the algorithm’s optimization ability. The value of α
+is very important. When α is larger, the beetle’s search per-
+formance is better, but the search time will be longer. When
+α is smaller, the beetle will ignore the search results of the
+previous iteration, and the entire algorithm is prone to be
+trapped into local optimum. The adjustment formula of the
+fractional- order α is:
+α = 0.9 −
+0.5 ∗k
+Max Iter .
+(27)
+To evaluate the optimization performance of the FBPA,
+four test functions are selected for comparison with the tra-
+ditional PSO and the improved PSO algorithms. The selected
+test functions are listed in Table 1, and their corresponding
+graphs are shown in Fig. 4.
+Table 1 Test function
+f (x)
+Dimensions
+Range
+Minimum
+f1(x)
+30
+[−100, 100]
+0
+f2(x)
+30
+[−10, 10]
+0
+f3(x)
+30
+[−100, 100]
+0
+f4(x)
+30
+[−100, 100]
+0
+The four functions above represent:
+f1(x) =
+n
+
+i=1
+x2
+i
+f2(x) =
+n
+
+i
+
+100
+
+xi+1 −x2
+i
+2
++ (xi −1)2
+
+
+f3(x) =
+n
+
+i=1
+⎛
+⎝
+i
+j=1
+x j
+⎞
+⎠
+2
+f4(x) = max
+i
+{|xi| , 1 ≤i ≤30}
+(28)
+According to the optimization results of the benchmark
+function using the above algorithm, the traditional PSO algo-
+rithm encounters local optimal problems too early and cannot
+avoid being trapped in local optima during the middle and
+late iterations. The improved PSO achieves a slight enhance-
+ment in optimization accuracy and efﬁciency by dynamically
+adjusting the inertia weight. However, the proposed FBPA
+demonstrates the ability to escape local optima, achieving
+higher optimization accuracy and efﬁciency compared to
+both the traditional PSO and the improved PSO algorithms.
+The control framework is shown in Fig. 5.
+Secondly, based on the advantages of the FOPID con-
+troller discussed in Sect. 2.2, this paper uses six FOPID
+controllers to perform trajectory tracking control for the six
+joints of the 6-DOF robotic arm. The inputs to each FOPID
+controller are the tracking error, the integral of the track-
+ing error, and the derivative of the tracking error, while the
+output is the joint torque. Additionally, the parameters to be
+optimized for each FOPID controller include K p, Ki, Kd,
+λ, and μ. To optimize these parameters, this paper employs
+the FBPA, transforming the parameter optimization problem
+of the FOPID controller into a swarm optimization problem,
+where the optimization adjustment of the FOPID controller
+becomes a task of selecting the global optimal value through
+the ﬁtness function. Therefore, for the 6-DOF robotic arm
+system, this paper uses FPBA to optimize the parameters
+of the six FOPID controllers for the six joints. A total of
+30 parameters need to be optimized, speciﬁcally K p j, Ki j,
+Kd j, λ j, and μ j, where j = 1, 2, 3, 4, 5, 6 denotes the j-th
+joint’s FOPID controller. Regarding the ﬁtness function, the
+goal is to achieve the optimal overall tracking error perfor-
+123
+
+=== PAGE 7 ===
+Trajectory tracking control of a 6-DOF...
+Page 7 of 14
+137
+Fig. 4 Optimal convergence graph of f (x)
+Fig. 5 The structure diagram of the FOPID controller of the FBPA
+Table 2 The physical parameters of the UR5 robotic arm
+Joint
+Mass (kg)
+Length (m)
+Inertia matrix (kg · m2)
+Link 1
+2.0
+0.128
+diag[1.0, 1.0, 1.0] × 10−3
+Link 2
+2.5
+0.612
+diag[4.0, 4.0, 4.0] × 10−2
+Link 3
+5.7
+0.571
+diag[6.0, 6.0, 4.0] × 10−2
+Link 4
+3.9
+0.164
+diag[5.5, 5.5, 4.0] × 10−2
+Link 5
+2.5
+0.115
+diag[4.0, 4.0, 4.0] × 10−2
+Link 6
+2.5
+0.092
+diag[4.0, 4.0, 4.0] × 10−2
+mance for the 6-DOF robotic arm system. Therefore, ITAE
+is selected as the ﬁtness function, expressed as:
+I T AE =
+ ∞
+0
+t
+6
+
+j=1
+|e j(t)|dt, j = 1, 2, 3, 4, 5, 6.
+(29)
+where t represents time, and e j(t) represents the tracking
+error of the j-th joint 5.
+4 Simulation experiment of robotic arm
+In order to verify the control effect of the FOPID controller
+based on the FBPA proposed in this paper, this paper selects
+the UR5 6-DOF robotic arm model as the research object
+and establishes a simulation model of robotic arm trajectory
+tracking control in the Simulink environment [31]. The iner-
+tia and partial physical parameters of the UR5 robotic arm are
+shown in Table 2. The algorithm parameters in the simulation
+are set as follows: The beetle population size is 30, the dimen-
+sion is 5, the maximum number of iterations MaxIter=100,
+the initial step size step=0.0001, the step size attenuation
+factor eta = 0.95, the learning factor c1 = c2 = c3 = 2,
+the minimum inertia weight wmin = 0.4, the maximum
+inertia weight wmax = 0.9, the minimum particle velocity
+vmin = −1, and the maximum particle velocity vmax = 1.
+The input signal of the control system is a step input. The
+simulation experiments are carried out using three control
+schemes: PID control, FOPID control, and FOPID control
+tuned by the FBPA. The simulation results are compared to
+observe the tracking effect of the six joints of the robotic arm.
+123
+
+=== PAGE 8 ===
+137
+Page 8 of 14
+Z. Jiang et al.
+Table 3 Average performance
+indicators of three controllers
+with step response
+Controller
+Overshoot (%)
+Adjustment Time (s)
+Peak Time (s)
+PID
+54.6
+2.44
+1.39
+FOPID
+31.2
+1.89
+1.33
+FBPA-FOPID
+22.1
+1.43
+1.09
+Fig. 6 Comparison of joint 1 position tracking trajectory and tracking error with step response
+Fig. 7 Comparison of joint 2 position tracking trajectory and tracking error with step response
+Fig. 8 Comparison of joint 3 position tracking trajectory and tracking error with step response
+Table 4 Tracking performance
+indicators of three controllers
+with sine response
+Controller
+Average error of MSE (rad)
+Average absolute value input τ (Nm)
+PID
+2.27×10−2
+3.7422×104
+FOPID
+0.88×10−2
+2.5686×104
+FBPA-FOPID
+0.37×10−2
+2.3154×104
+123
+
+=== PAGE 9 ===
+Trajectory tracking control of a 6-DOF...
+Page 9 of 14
+137
+Fig. 9 Comparison of joint 4 position tracking trajectory and tracking error with step response
+Fig. 10 Comparison of joint 5 position tracking trajectory and tracking error with step response
+Fig. 11 Comparison of joint 6 position tracking trajectory and tracking error with step response
+The tracking results of the six joints are shown in Figs. 6, 7,
+8, 9, 10 and 11.
+In the simulation experiments, we conducted two sets
+of experiments: step response and sinusoidal response. The
+experimental results of the step response are shown in Figs. 6,
+7, 8, 9, 10, 11 and 12, while the comparison of the three con-
+trol methods and the average indicators of the six joints is
+shown in Table 3; the results of the sine response are shown
+in Figs. 13, 14, 15, 16, 17, 18 and 19. The tracking perfor-
+mance indicators with the sine response are shown in Table 4.
+According to Figs. 6, 7, 8, 9, 10 and 11 and Table 3, the
+overshoot of more than half of the joints of the integer-order
+PID control exceeds 30%, and the overshoot of the FOPID
+control based on the FBPA is mostly within 30%, which are
+28.0%,20.1%,10.1%,2.5%,31.1%,and27.5%,respectively.
+The overshoot is smaller, the adjustment time is shorter, and it
+isclosertothereferencetrajectory.Onthewhole,thetracking
+error is smaller than that of the other two control methods,
+the control is accurate, fast and stable, and the trajectory
+tracking effect is the best. Besides, according to the charac-
+teristic curve of joints 1-6 displayed in Fig. 12, the driving
+torque of the FOPID controller optimized by the FBPA is not
+too large, and there is no strong chattering during the entire
+movement of the robotic arm, ensuring the smooth operation
+of the system.
+123
+
+=== PAGE 10 ===
+137
+Page 10 of 14
+Z. Jiang et al.
+Fig. 12 Joints 1-6 driving torque characteristic curve with step response
+Fig. 13 Comparison of joint 1 position tracking trajectory and tracking error with sine response
+As shown in Figs. 13, 14, 15, 16, 17, 18 and 19, the track-
+ing responses of a 6-DOF robotic arm under PID, FOPID and
+FBPA-FOPID controllers with sinusoidal inputs demonstrate
+the tracking performance of each joint and the corresponding
+tracking errors. To evaluate the tracking performance more
+intuitively, the mean squared error (MSE) of the tracking
+error for each joint was calculated, followed by averaging
+the MSE across all six joints. The results show that the aver-
+age MSE for the three controllers is 2.27 × 10−2 for PID,
+0.88 × 10−2 for FOPID, and 0.37 × 10−2 for FBPA-FOPID.
+Additionally, to assess the control input efﬁciency, the abso-
+lute values of the input signals for each joint were summed
+and then averaged across all six joints. The average absolute
+input values for PID, FOPID, and FBPA-FOPID controllers
+123
+
+=== PAGE 11 ===
+Trajectory tracking control of a 6-DOF...
+Page 11 of 14
+137
+Fig. 14 Comparison of joint 2 position tracking trajectory and tracking error with sine response
+Fig. 15 Comparison of joint 3 position tracking trajectory and tracking error with sine response
+Fig. 16 Comparison of joint 4 position tracking trajectory and tracking error with sine response
+Fig. 17 Comparison of joint 5 position tracking trajectory and tracking error with sine response
+123
+
+=== PAGE 12 ===
+137
+Page 12 of 14
+Z. Jiang et al.
+Fig. 18 Comparison of joint 6 position tracking trajectory and tracking error with sine response
+Fig. 19 Joints 1-6 driving torque characteristic curve with sine response
+are 3.7422 × 104, 2.5686 × 104, and 2.3154 × 104, respec-
+tively. In summary, the FBPA-FOPID controller exhibits
+superior control performance under sinusoidal inputs, sig-
+niﬁcantly reducing the tracking error while minimizing the
+control input magnitude, demonstrating higher efﬁciency and
+stability.
+5 Conclusion
+This paper conducts in-depth research and analysis of the
+dynamics, FOPID controller and trajectory tracking control
+of the robotic arm, which can be summarized as follows: The
+dynamic modeling of the robotic arm is the basis for study-
+ing the trajectory tracking control of the robotic arm. This
+123
+
+=== PAGE 13 ===
+Trajectory tracking control of a 6-DOF...
+Page 13 of 14
+137
+paper takes the 6-DOF robotic arm as the research object,
+uses the Lagrange method for dynamic analysis and estab-
+lishes the dynamic model of the 6-DOF robotic arm under the
+premiseofensuringthedynamiccharacteristicsoftherobotic
+arm. This study explores the basic theory of fractional-order
+control and its system characteristics and designs a FOPID
+controller. Through the simulation experiment of trajectory
+tracking control of the robotic arm model in the Simulink
+environment,theperformancedifferencebetweentheFOPID
+and integer-order PID controllers is compared. According to
+the experimental results, the FOPID controller can describe
+and control the movement of the robotic arm more accu-
+rately. At the same time, in view of the fact that traditional
+BAS algorithm and PSO algorithm are prone to be trapped
+intolocalconvergenceandprematureconvergence,thispaper
+introduces the concept of fractional calculus into the algo-
+rithm and proposes a fractional-order beetle antennae particle
+swarm hybrid algorithm, which is applied to the parameter
+tuningoftheFOPIDcontrollerandtrajectorytrackingcontrol
+of the 6-DOF robotic arm. It greatly reduces the overshoot
+during the operation of the 6-DOF robotic arm and improves
+the response speed, obtains higher quality control effect and
+veriﬁes its effectiveness and reliability in practical applica-
+tions.
+Acknowledgements The authors thank XiaoboWu in Hefei University
+of Technology for providing instruments for us. In addition, we thank
+Shuai Shao for experimental help.
+Author Contributions Zhou Jiang was involved in writing—original
+draft and methodology and also responsible for formal analysis, super-
+vision, investigation, reviewing and editing. Xiaohua Zhang took part
+in formal analysis, supervision and visualization. Guoquan Liu partici-
+patedinformalanalysisandvisualization.Allauthorsreadandapproved
+the ﬁnal version of the manuscript.
+Funding This research was supported by Anhui Provincial Department
+ofEducationUniversityScientiﬁcResearchProject(No.2024AH050496).
+Availability of data and material The data and code that support the
+ﬁndings of this study are available from the corresponding author upon
+reasonable request.
+Declarations
+Competing interests The authors declare that they have no known
+competing ﬁnancial interests or personal relationships that could have
+appeared to inﬂuence the work reported in this paper.
+References
+1. Kováˇc J, Jenˇcík R, Andrejko P, Hajduk M, Pilat Z, Tomˇci P,
+Varga J, Bezák M (2020) Integrated palletizing workstation with
+an industrial robot and a cobot. In: Advances in service and indus-
+trial robotics: proceedings of the 28th international conference on
+robotics in Alpe-Adria-Danube Region (RAAD 2019) 28, pp. 202–
+209. Springer
+2. Cong VD (2023) Visual servoing control of 4-dof palletizing
+robotic arm for vision based sorting robot system. Int J Interact
+Des Manuf (IJIDeM) 17(2):717–728
+3. Bae J, Moon Y, Park E, Kim J, Jin S, Seo T (2022) Cooperative
+underwater vehicle-manipulator operation using redundant resolu-
+tion method. Int J Precis Eng Manuf 23(9):1003–1017
+4. Aydin MN, Coban R (2022) Pid sliding surface-based adaptive
+dynamic second-order fault-tolerant sliding mode control design
+and experimental application to an electromechanical system. Int
+J Control 95(7):1767–1776
+5. Khosravi MA, Taghirad HD (2014) Robust pid control of fully-
+constrained cable driven parallel robots. Mechatronics 24(2):87–97
+6. Shuprajhaa T, Sujit SK, Srinivasan K (2022) Reinforcement
+learning based adaptive pid controller design for control of lin-
+ear/nonlinear unstable processes. Appl Soft Comput 128:109450
+7. Yamparala S, Lakshminarasimman L, Rao GS (2022) Optimal
+design of fopid controller for dﬁg based wind energy conver-
+sion system using grey-wolf optimization algorithm. Int J Renew
+Energy Res (IJRER) 12(4):2111–2120
+8. Kumar A, Suhag S (2019) Whale optimisation algorithm tuned
+fractional order piλdμ controller for load frequency control of
+multi-source power system. Int J Bio-Inspired Comput 13(4):209–
+221
+9. Balanji HM, Turgut AE, Tunc LT (2022) A novel vision-based
+calibration framework for industrial robotic manipulators. Robot
+Comput-Integr Manuf 73:102248
+10. Oh C, Lee J-H, Ha TI, Min B-K (2023) Model parameter identiﬁca-
+tion of a machining robot using joint frequency response functions.
+Int J Precis Eng Manuf 24(9):1647–1659
+11. Dengler N, Groklaus D, Bennewitz M (2022) Learning goal-
+oriented non-prehensile pushing in cluttered scenes. arXiv e-prints
+12. Choubey C, Ohri J (2021) Optimal trajectory generation for a 6-
+dof parallel manipulator using grey wolf optimization algorithm.
+Robotica 39(3):411–427
+13. Nyong-Bassey BE, Epemu AM (2022) Inverse kinematics analysis
+of novel 6-dof robotic arm manipulator for oil and gas welding
+using meta-heuristic algorithms. Int J Robot, Autom Sci 4:13–22
+14. Li C, Chen A, Ye J (2011) Numerical approaches to fractional
+calculus and fractional ordinary differential equation. J Comput
+Phys 230(9):3352–3368
+15. Borase RP, Maghade D, Sondkar S, Pawar S (2021) A review of
+pid control, tuning methods and applications. Int J Dyn Control
+9:818–827
+16. Ayas MS, Sahin E (2021) Fopid controller with fractional ﬁlter for
+an automatic voltage regulator. Comput Electr Eng 90:106895
+17. Tufenkci S, Senol B, Alagoz BB (2020) Disturbance rejection fopid
+controller design in v-domain. J Adv Res 25:171–180
+18. Tepljakov A, Alagoz BB, Yeroglu C, Gonzalez EA, Hosseinnia SH,
+Petlenkov E, Ates A, Cech M (2021) Towards industrialization of
+fopid controllers: a survey on milestones of fractional-order control
+and pathways for future developments. IEEE Access 9:21016–
+21042
+19. Hu Q, Zhang D, Wu Z (2021) Trajectory planning and tracking
+control for 6-dof stanford manipulator based on adaptive sliding
+mode multi-stage switching control. Int J Robust Nonlinear Control
+31(14):6602–6625
+20. Roshanzamir M, Balafar MA, Razavi SN (2020) A new hierar-
+chical multi group particle swarm optimization with different task
+allocations inspired by holonic multi agent systems. Expert Syst
+Appl 149:113292
+21. Kennedy J, Eberhart R (1995) Particle swarm optimization. In:
+Icnn’95-international conference on neural networks, vol. 4, pp.
+1942–1948. IEEE
+22. Shao Z, Klavžar S, Li Z, Wu P, Xu J (2017) On the signed roman k-
+domination: complexity and thin torus graphs. Discrete Appl Math
+233:175–186
+123
+
+=== PAGE 14 ===
+137
+Page 14 of 14
+Z. Jiang et al.
+23. Oladipo S, Sun Y, Adeleke O (2023) An improved particle swarm
+optimization and adaptive neuro-fuzzy inference system for pre-
+dicting the energy consumption of university residence. Int Trans
+Electr Energy Syst 2023(1):8508800
+24. Couceiro M, Sivasundaram S (2016) Novel fractional order particle
+swarm optimization. Appl Math Comput 283:36–54
+25. Malik NA, Chang C-L, Chaudhary NI, Raja MAZ, Cheema KM,
+Shu C-M, Alshamrani SS (2022) Knacks of fractional order swarm-
+ing intelligence for parameter estimation of harmonics in electrical
+systems. Mathematics 10(9):1570
+26. Khan AT, Cao X, Li S (2022) Dual beetle antennae search system
+for optimal planning and robust control of 5-link biped robots. J
+Comput Sci 60:101556
+27. Khan AH, Cao X, Li S, Katsikis VN, Liao L (2020) Bas-adam:
+an adam based approach to improve the performance of bee-
+tle antennae search optimizer. IEEE/CAA J Automatica Sinica
+7(2):461–471
+28. Ye K, Shu L, Xiao Z, Li W (2024) An improved beetle swarm anten-
+nae search algorithm based on multiple operators. Soft Computing,
+1–16
+29. Sabahat E, Eslaminejad M, Ashoormahani E (2022) A new local-
+ization method in internet of things by improving beetle antenna
+search algorithm. Wirel Netw 28(3):1067–1078
+30. Zhang P, Zhang J (2022) Lower limb exoskeleton robots’ dynamics
+parameters identiﬁcation based on improved beetle swarm opti-
+mization algorithm. Robotica 40(8):2716–2731
+31. Kundu D, Dan A, Hui NB (2022) Dynamics and control of a
+6-dof biped robot on matlab/simmechanics. In: Machines, mecha-
+nism and robotics: proceedings of iNaCoMM 2019, pp. 661–671.
+Springer
+Springer Nature or its licensor (e.g. a society or other partner) holds
+exclusive rights to this article under a publishing agreement with the
+author(s) or other rightsholder(s); author self-archiving of the accepted
+manuscript version of this article is solely governed by the terms of such
+publishing agreement and applicable law.
+123

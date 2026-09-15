@@ -53,18 +53,18 @@ fopid.mu = 1.1*ones(6,1);
 % step trajectory and plant. Search uses a coarser Ts (tuneTs) only to make
 % the swarm evaluations tractable; all printed metrics are full cfg.Ts.
 gwo.enabled = true;
-gwo.fastMode = false;  % Deep maximum optimization search
+gwo.fastMode = true;  % Small fast unoptimized run
 if gwo.fastMode
     gwo.nWolves = 4;
-    gwo.maxIter = 6;
+    gwo.maxIter = 4;
     gwo.tuneTs = 0.02;
 else
     gwo.nWolves = 20;
     gwo.maxIter = 25;
-    gwo.tuneTs = 0.005;  % Finer grid matching simulation timestep
+    gwo.tuneTs = 0.005;
 end
 gwo.rngSeed = 42;
-gwo.useCache = false;  % Disable cache to ensure fresh GWO output and graphs are generated
+gwo.useCache = false;  % Disable cache to ensure fresh output and tables
 
 %% Plant and references
 plant = make_ur5_plant(cfg);
